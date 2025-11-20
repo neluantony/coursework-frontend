@@ -11,7 +11,7 @@ const searchTerm = ref('')
 const orderName = ref('')
 const orderPhone = ref('')
 
-// Your live Render Backend URL
+// Live Render Backend URL
 const BASE_URL = 'https://coursework-backend-qzv7.onrender.com'
 
 onMounted(() => {
@@ -59,21 +59,39 @@ function removeFromCart(lesson) {
 }
 
 async function submitOrder() {
+  // 1. Prepare the detailed lesson data
+  // We map over the cart IDs and find the matching lesson object for each one
+  const orderDetails = cart.value.map((cartId) => {
+    const lesson = lessons.value.find((l) => l.id === cartId)
+    return {
+      id: lesson.id,
+      topic: lesson.subject, // Saving the name/topic
+      location: lesson.location,
+      price: lesson.price,
+    }
+  })
+
+  // 2. Create the order object with the extra details
   const order = {
     name: orderName.value,
     phone: orderPhone.value,
-    lessonIds: cart.value,
+    lessonIds: cart.value, // We keep this to satisfy the specific coursework requirement
+    lessons: orderDetails, // We ADD this to make the database more useful
+    totalPrice: orderDetails.reduce((sum, item) => sum + item.price, 0), // Bonus: Calculate total price
   }
 
+  // Group the cart items for the PUT request (unchanged logic)
   const cartItemDetails = cart.value.map((id) => lessons.value.find((l) => l.id === id))
 
   try {
+    // 3. Save the order to Backend
     await fetch(`${BASE_URL}/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(order),
     })
 
+    // 4. Update spaces (PUT request) - Unchanged
     const updatePromises = cartItemDetails.map((item) => {
       return fetch(`${BASE_URL}/lessons/${item.id}`, {
         method: 'PUT',
@@ -83,6 +101,7 @@ async function submitOrder() {
     })
     await Promise.all(updatePromises)
 
+    // 5. Handle success
     alert('Order submitted successfully!')
     cart.value = []
     orderName.value = ''
