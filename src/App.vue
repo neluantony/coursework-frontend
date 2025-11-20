@@ -12,7 +12,7 @@ const orderName = ref('')
 const orderPhone = ref('')
 
 onMounted(() => {
-  fetch('http://localhost:3000/lessons')
+  fetch('https://coursework-backend-qzv7.onrender.com/lessons')
     .then((response) => response.json())
     .then((data) => {
       lessons.value = data
@@ -48,7 +48,7 @@ async function submitOrder() {
 
   try {
     // 1. Save the order
-    await fetch('http://localhost:3000/orders', {
+    await fetch('https://coursework-backend-qzv7.onrender.com/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(order),
@@ -56,7 +56,7 @@ async function submitOrder() {
 
     // 2. Update spaces for each lesson in the cart
     const updatePromises = cartItemDetails.map((item) => {
-      return fetch(`http://localhost:3000/lessons/${item.id}`, {
+      return fetch(`https://coursework-backend-qzv7.onrender.com/lessons/${item.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ spaces: item.spaces }),
