@@ -24,6 +24,7 @@ function handleAddToCart() {
 
     <div class="card-body">
       <h3>{{ lesson.subject }}</h3>
+
       <div class="info-row">
         <i class="fas fa-map-marker-alt"></i>
         <span>{{ lesson.location }}</span>
@@ -47,10 +48,11 @@ function handleAddToCart() {
 </template>
 
 <style scoped>
+/* Card Container */
 .lesson-card {
   background: white;
   border-radius: 12px;
-  overflow: hidden;
+  overflow: hidden; /* Keeps image inside rounded corners */
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
   transition:
     transform 0.3s,
@@ -61,11 +63,13 @@ function handleAddToCart() {
   border: 1px solid #eee;
 }
 
+/* Hover Effect for the whole card */
 .lesson-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
+/* Header Styling */
 .card-header {
   background-color: #f8f9fa;
   padding: 1.5rem;
@@ -80,6 +84,7 @@ function handleAddToCart() {
   margin-bottom: 0.5rem;
 }
 
+/* Floating Price Tag */
 .price-tag {
   position: absolute;
   top: 15px;
@@ -93,6 +98,7 @@ function handleAddToCart() {
   box-shadow: 0 2px 5px rgba(46, 204, 113, 0.3);
 }
 
+/* Body Styling */
 .card-body {
   padding: 1.2rem;
   flex-grow: 1;
@@ -115,8 +121,11 @@ h3 {
 .info-row i {
   width: 24px;
   color: #95a5a6;
+  text-align: center;
+  margin-right: 8px;
 }
 
+/* Low Stock Warning Color */
 .availability.low-stock {
   color: #e74c3c;
 }
@@ -125,6 +134,7 @@ h3 {
   color: #e74c3c;
 }
 
+/* Footer Styling */
 .card-footer {
   padding: 1.2rem;
   background-color: #fff;

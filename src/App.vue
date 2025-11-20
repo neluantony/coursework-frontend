@@ -11,6 +11,7 @@ const searchTerm = ref('')
 const orderName = ref('')
 const orderPhone = ref('')
 
+// Your live Render Backend URL
 const BASE_URL = 'https://coursework-backend-qzv7.onrender.com'
 
 onMounted(() => {
@@ -238,7 +239,16 @@ const isCheckoutFormValid = computed(() => {
 body {
   margin: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f5f7fa;
+
+  /* --- BACKGROUND IMAGE UPDATE --- */
+  /* This loads the image directly from your Render Backend */
+  background-image: url('https://coursework-backend-qzv7.onrender.com/images/background.png');
+  background-size: cover; /* Ensures image covers the whole screen */
+  background-position: center; /* Centers the image */
+  background-attachment: fixed; /* Keeps background still when scrolling */
+  background-repeat: no-repeat; /* Prevents tiling */
+  background-color: #f5f7fa; /* Fallback color */
+
   color: #2c3e50;
 }
 
@@ -250,12 +260,14 @@ body {
 
 /* Header Styles */
 header {
-  background: linear-gradient(135deg, #3498db, #2c3e50);
+  /* Added transparency to header so background shows through slightly */
+  background: linear-gradient(135deg, rgba(52, 152, 219, 0.95), rgba(44, 62, 80, 0.95));
   color: white;
   padding: 1rem 2rem;
   border-radius: 0 0 15px 15px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   margin-bottom: 2rem;
+  backdrop-filter: blur(5px); /* Adds a modern blur effect */
 }
 
 .header-content {
@@ -305,12 +317,13 @@ main {
 
 /* Sidebar Controls */
 .filter-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.95); /* Slight transparency */
   padding: 1.5rem;
   border-radius: 12px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   position: sticky;
   top: 20px;
+  backdrop-filter: blur(5px);
 }
 
 .filter-card h2 {
@@ -401,10 +414,11 @@ select:focus {
 
 .cart-section,
 .checkout-section {
-  background: white;
+  background: rgba(255, 255, 255, 0.95); /* Slight transparency */
   padding: 2rem;
   border-radius: 12px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(5px);
 }
 
 .cart-item {
