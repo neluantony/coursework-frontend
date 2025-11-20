@@ -11,10 +11,8 @@ const searchTerm = ref('')
 const orderName = ref('')
 const orderPhone = ref('')
 
-// Define your backend URL here to make it easier to manage
 const BASE_URL = 'https://coursework-backend-qzv7.onrender.com'
 
-// 1. Load all lessons when the app starts
 onMounted(() => {
   fetch(`${BASE_URL}/lessons`)
     .then((response) => response.json())
@@ -24,10 +22,8 @@ onMounted(() => {
     .catch((error) => console.error('Error fetching lessons:', error))
 })
 
-// 2. Watch the searchTerm variable. Whenever it changes, query the backend.
 watch(searchTerm, (newTerm) => {
   if (newTerm.trim().length > 0) {
-    // If there is text, search on the backend using the /search route
     fetch(`${BASE_URL}/search?q=${newTerm}`)
       .then((response) => response.json())
       .then((data) => {
@@ -35,7 +31,6 @@ watch(searchTerm, (newTerm) => {
       })
       .catch((error) => console.error('Error searching lessons:', error))
   } else {
-    // If the search box is empty, fetch all lessons again
     fetch(`${BASE_URL}/lessons`)
       .then((response) => response.json())
       .then((data) => {
@@ -72,14 +67,12 @@ async function submitOrder() {
   const cartItemDetails = cart.value.map((id) => lessons.value.find((l) => l.id === id))
 
   try {
-    // 1. Save the order
     await fetch(`${BASE_URL}/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(order),
     })
 
-    // 2. Update spaces for each lesson in the cart
     const updatePromises = cartItemDetails.map((item) => {
       return fetch(`${BASE_URL}/lessons/${item.id}`, {
         method: 'PUT',
@@ -89,7 +82,6 @@ async function submitOrder() {
     })
     await Promise.all(updatePromises)
 
-    // 3. Handle success
     alert('Order submitted successfully!')
     cart.value = []
     orderName.value = ''
@@ -101,19 +93,14 @@ async function submitOrder() {
   }
 }
 
-// 3. Updated Computed Property: Removed local filtering, kept sorting
 const sortedLessons = computed(() => {
-  // The 'lessons' array now contains exactly what we want (either all lessons or search results)
-  // so we only need to sort it here.
   const lessonsArray = [...lessons.value]
-
   lessonsArray.sort((a, b) => {
     let comparison = 0
     if (a[sortAttribute.value] > b[sortAttribute.value]) comparison = 1
     else if (a[sortAttribute.value] < b[sortAttribute.value]) comparison = -1
     return sortOrder.value === 'descending' ? -comparison : comparison
   })
-
   return lessonsArray
 })
 
@@ -129,133 +116,427 @@ const isCheckoutFormValid = computed(() => {
 </script>
 
 <template>
-  <header>
-    <h1>After School Activities</h1>
-    <div class="header-controls">
-      <button @click="toggleCartPage" :disabled="cart.length === 0">
-        <i class="fas fa-shopping-cart"></i>
-        <span v-if="showLessonsPage">Shopping Cart ({{ cart.length }})</span>
-        <span v-else>Back to Lessons</span>
-      </button>
-    </div>
-  </header>
+  <div class="app-container">
+    <header>
+      <div class="header-content">
+        <h1><i class="fas fa-graduation-cap"></i> After School Activities</h1>
+        <button class="cart-btn" @click="toggleCartPage" :disabled="cart.length === 0">
+          <i class="fas fa-shopping-cart"></i>
+          <span v-if="showLessonsPage">Cart ({{ cart.length }})</span>
+          <span v-else>Back to Lessons</span>
+        </button>
+      </div>
+    </header>
 
-  <main>
-    <div id="lessons-page" v-if="showLessonsPage">
-      <aside class="controls">
-        <h2>Filter & Sort</h2>
-        <div class="control-group">
-          <label for="search">Search:</label>
-          <input type="text" id="search" placeholder="Search for lessons..." v-model="searchTerm" />
-        </div>
-        <div class="control-group">
-          <label for="sort-attribute">Sort by:</label>
-          <select id="sort-attribute" v-model="sortAttribute">
-            <option value="subject">Subject</option>
-            <option value="location">Location</option>
-            <option value="price">Price</option>
-            <option value="spaces">Availability</option>
-          </select>
-        </div>
-        <div class="control-group">
-          <label>Order:</label>
-          <label
-            ><input type="radio" name="sort-order" value="ascending" v-model="sortOrder" />
-            Ascending</label
-          >
-          <label
-            ><input type="radio" name="sort-order" value="descending" v-model="sortOrder" />
-            Descending</label
-          >
-        </div>
-      </aside>
-      <div id="lessons-container">
-        <LessonCard
-          v-for="lesson in sortedLessons"
-          :key="lesson.id"
-          :lesson="lesson"
-          @add-to-cart="addToCart(lesson)"
-        />
-      </div>
-    </div>
+    <main>
+      <div id="lessons-page" v-if="showLessonsPage">
+        <aside class="controls">
+          <div class="filter-card">
+            <h2><i class="fas fa-filter"></i> Filter & Sort</h2>
 
-    <div id="checkout-page" v-else>
-      <h2>Shopping Cart</h2>
-      <div id="cart-items-container">
-        <div v-if="cart.length === 0">
-          <p>Your cart is empty.</p>
-        </div>
-        <div v-else v-for="item in cartItems" :key="item.id" class="cart-item">
-          <p>{{ item.subject }} - £{{ item.price }}</p>
-          <button @click="removeFromCart(item)">Remove</button>
+            <div class="control-group">
+              <label for="search">Search</label>
+              <div class="input-icon-wrapper">
+                <i class="fas fa-search input-icon"></i>
+                <input type="text" id="search" placeholder="Find lessons..." v-model="searchTerm" />
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label for="sort-attribute">Sort by</label>
+              <div class="select-wrapper">
+                <select id="sort-attribute" v-model="sortAttribute">
+                  <option value="subject">Subject</option>
+                  <option value="location">Location</option>
+                  <option value="price">Price</option>
+                  <option value="spaces">Availability</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="control-group radio-group">
+              <label class="radio-label">
+                <input type="radio" name="sort-order" value="ascending" v-model="sortOrder" />
+                <span>Ascending</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="sort-order" value="descending" v-model="sortOrder" />
+                <span>Descending</span>
+              </label>
+            </div>
+          </div>
+        </aside>
+
+        <div id="lessons-container">
+          <LessonCard
+            v-for="lesson in sortedLessons"
+            :key="lesson.id"
+            :lesson="lesson"
+            @add-to-cart="addToCart(lesson)"
+          />
         </div>
       </div>
-      <hr v-if="cart.length > 0" />
-      <h2>Checkout</h2>
-      <div class="checkout-form">
-        <p>
-          <label for="name"><strong>Name:</strong></label>
-          <input type="text" id="name" placeholder="Letters and spaces only" v-model="orderName" />
-        </p>
-        <p>
-          <label for="phone"><strong>Phone:</strong></label>
-          <input type="text" id="phone" placeholder="Numbers only" v-model="orderPhone" />
-        </p>
-        <button :disabled="!isCheckoutFormValid" @click="submitOrder">Checkout</button>
+
+      <div id="checkout-page" v-else>
+        <div class="checkout-container">
+          <div class="cart-section">
+            <h2>Your Shopping Cart</h2>
+            <div v-if="cart.length === 0" class="empty-cart">
+              <i class="fas fa-shopping-basket fa-3x"></i>
+              <p>Your cart is empty.</p>
+              <button class="secondary-btn" @click="toggleCartPage">Go Back</button>
+            </div>
+            <div v-else class="cart-items-list">
+              <div v-for="item in cartItems" :key="item.id" class="cart-item">
+                <div class="item-info">
+                  <i :class="item.icon" class="item-icon"></i>
+                  <div>
+                    <h3>{{ item.subject }}</h3>
+                    <p class="item-location">{{ item.location }}</p>
+                  </div>
+                </div>
+                <div class="item-actions">
+                  <span class="item-price">£{{ item.price }}</span>
+                  <button class="remove-btn" @click="removeFromCart(item)">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="checkout-section" v-if="cart.length > 0">
+            <h2>Checkout Details</h2>
+            <div class="checkout-form">
+              <div class="form-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" placeholder="e.g. John Doe" v-model="orderName" />
+                <small>Letters and spaces only</small>
+              </div>
+              <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="text" id="phone" placeholder="e.g. 07123456789" v-model="orderPhone" />
+                <small>Numbers only</small>
+              </div>
+              <button class="checkout-btn" :disabled="!isCheckoutFormValid" @click="submitOrder">
+                Complete Order <i class="fas fa-check"></i>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </main>
+    </main>
+  </div>
 </template>
 
 <style>
-/* Global styles for the application */
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
+/* Global Reset & Base Styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f5f7fa;
   color: #2c3e50;
+}
+
+.app-container {
   max-width: 1200px;
   margin: 0 auto;
+  padding: 0 20px 40px;
 }
+
+/* Header Styles */
+header {
+  background: linear-gradient(135deg, #3498db, #2c3e50);
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 0 0 15px 15px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.cart-btn {
+  background-color: white;
+  color: #3498db;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 25px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.cart-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.cart-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Main Layout */
 main {
-  display: flex;
-  padding: 1rem;
+  min-height: 60vh;
 }
-aside.controls {
-  margin-right: 2rem;
-  padding: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  height: fit-content;
+
+#lessons-page {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 2rem;
 }
+
+/* Sidebar Controls */
+.filter-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 20px;
+}
+
+.filter-card h2 {
+  font-size: 1.2rem;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #2c3e50;
+  border-bottom: 2px solid #f0f2f5;
+  padding-bottom: 0.5rem;
+}
+
 .control-group {
-  margin-bottom: 1rem;
+  margin-bottom: 1.2rem;
 }
-#lessons-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
+
+.control-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #666;
 }
-#checkout-page {
+
+/* Input Styling */
+.input-icon-wrapper {
+  position: relative;
+}
+
+.input-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #aaa;
+}
+
+input[type='text'],
+select {
   width: 100%;
+  padding: 0.6rem 0.6rem 0.6rem 2.2rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: border-color 0.3s;
 }
+
+select {
+  padding-left: 0.8rem;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+/* Radio Buttons */
+.radio-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: normal !important;
+}
+
+.radio-label input {
+  margin-right: 0.4rem;
+}
+
+/* Lessons Grid */
+#lessons-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Checkout Page Styles */
+.checkout-container {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 2rem;
+}
+
+.cart-section,
+.checkout-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
 .cart-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border: 1px solid #eee;
-  padding: 0.5rem 1rem;
-  margin-bottom: 0.5rem;
-  border-radius: 4px;
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+  transition: background 0.2s;
 }
-.checkout-form p {
-  margin-bottom: 1rem;
+
+.cart-item:last-child {
+  border-bottom: none;
 }
-.checkout-form input {
-  width: 250px;
-  padding: 0.5rem;
-  margin-left: 1rem;
+
+.item-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
-button:disabled {
-  opacity: 0.5;
+
+.item-icon {
+  color: #3498db;
+  font-size: 1.2rem;
+  width: 30px;
+  text-align: center;
+}
+
+.item-info h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #2c3e50;
+}
+
+.item-location {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.item-price {
+  font-weight: bold;
+  color: #2c3e50;
+  margin-right: 1rem;
+}
+
+.remove-btn {
+  background: #ff7675;
+  color: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-btn:hover {
+  background: #d63031;
+}
+
+/* Checkout Form */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group input {
+  padding: 0.8rem;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 0.3rem;
+  color: #999;
+  font-size: 0.8rem;
+}
+
+.checkout-btn {
+  width: 100%;
+  padding: 1rem;
+  background-color: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+  margin-top: 1rem;
+}
+
+.checkout-btn:hover:not(:disabled) {
+  background-color: #219150;
+}
+
+.checkout-btn:disabled {
+  background-color: #95a5a6;
   cursor: not-allowed;
+}
+
+/* Empty State */
+.empty-cart {
+  text-align: center;
+  padding: 3rem 0;
+  color: #95a5a6;
+}
+
+.secondary-btn {
+  margin-top: 1rem;
+  padding: 0.6rem 1.2rem;
+  background: transparent;
+  border: 2px solid #3498db;
+  color: #3498db;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  #lessons-page,
+  .checkout-container {
+    grid-template-columns: 1fr;
+  }
+
+  .header-content {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
 }
 </style>
