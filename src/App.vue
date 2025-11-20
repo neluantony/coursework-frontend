@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import LessonCard from './components/LessonCard.vue'
 
 const lessons = ref([])
@@ -11,13 +11,38 @@ const searchTerm = ref('')
 const orderName = ref('')
 const orderPhone = ref('')
 
+// Define your backend URL here to make it easier to manage
+const BASE_URL = 'https://coursework-backend-qzv7.onrender.com'
+
+// 1. Load all lessons when the app starts
 onMounted(() => {
-  fetch('https://coursework-backend-qzv7.onrender.com/lessons')
+  fetch(`${BASE_URL}/lessons`)
     .then((response) => response.json())
     .then((data) => {
       lessons.value = data
     })
     .catch((error) => console.error('Error fetching lessons:', error))
+})
+
+// 2. Watch the searchTerm variable. Whenever it changes, query the backend.
+watch(searchTerm, (newTerm) => {
+  if (newTerm.trim().length > 0) {
+    // If there is text, search on the backend using the /search route
+    fetch(`${BASE_URL}/search?q=${newTerm}`)
+      .then((response) => response.json())
+      .then((data) => {
+        lessons.value = data
+      })
+      .catch((error) => console.error('Error searching lessons:', error))
+  } else {
+    // If the search box is empty, fetch all lessons again
+    fetch(`${BASE_URL}/lessons`)
+      .then((response) => response.json())
+      .then((data) => {
+        lessons.value = data
+      })
+      .catch((error) => console.error('Error resetting lessons:', error))
+  }
 })
 
 function addToCart(lesson) {
@@ -48,7 +73,7 @@ async function submitOrder() {
 
   try {
     // 1. Save the order
-    await fetch('https://coursework-backend-qzv7.onrender.com/orders', {
+    await fetch(`${BASE_URL}/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(order),
@@ -56,7 +81,7 @@ async function submitOrder() {
 
     // 2. Update spaces for each lesson in the cart
     const updatePromises = cartItemDetails.map((item) => {
-      return fetch(`https://coursework-backend-qzv7.onrender.com/lessons/${item.id}`, {
+      return fetch(`${BASE_URL}/lessons/${item.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ spaces: item.spaces }),
@@ -76,23 +101,19 @@ async function submitOrder() {
   }
 }
 
+// 3. Updated Computed Property: Removed local filtering, kept sorting
 const sortedLessons = computed(() => {
-  let filteredLessons = lessons.value
-  if (searchTerm.value) {
-    const lowerCaseSearchTerm = searchTerm.value.toLowerCase()
-    filteredLessons = lessons.value.filter(
-      (lesson) =>
-        lesson.subject.toLowerCase().includes(lowerCaseSearchTerm) ||
-        lesson.location.toLowerCase().includes(lowerCaseSearchTerm),
-    )
-  }
-  const lessonsArray = [...filteredLessons]
+  // The 'lessons' array now contains exactly what we want (either all lessons or search results)
+  // so we only need to sort it here.
+  const lessonsArray = [...lessons.value]
+
   lessonsArray.sort((a, b) => {
     let comparison = 0
     if (a[sortAttribute.value] > b[sortAttribute.value]) comparison = 1
     else if (a[sortAttribute.value] < b[sortAttribute.value]) comparison = -1
     return sortOrder.value === 'descending' ? -comparison : comparison
   })
+
   return lessonsArray
 })
 
@@ -118,6 +139,7 @@ const isCheckoutFormValid = computed(() => {
       </button>
     </div>
   </header>
+
   <main>
     <div id="lessons-page" v-if="showLessonsPage">
       <aside class="controls">
@@ -156,6 +178,7 @@ const isCheckoutFormValid = computed(() => {
         />
       </div>
     </div>
+
     <div id="checkout-page" v-else>
       <h2>Shopping Cart</h2>
       <div id="cart-items-container">
@@ -185,7 +208,7 @@ const isCheckoutFormValid = computed(() => {
 </template>
 
 <style>
-/* Global styles remain the same */
+/* Global styles for the application */
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   color: #2c3e50;
