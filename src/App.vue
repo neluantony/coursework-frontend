@@ -1,37 +1,60 @@
 <script setup>
+// Import necessary Vue functions for reactivity and lifecycle management
 import { ref, computed, onMounted, watch } from 'vue'
+// Import the LessonCard component for displaying individual lesson details
 import LessonCard from './components/LessonCard.vue'
 
+// --- STATE VARIABLES ---
+// 'lessons' will hold the array of lesson objects fetched from the server
 const lessons = ref([])
+// 'cart' will store the IDs of lessons added by the user
 const cart = ref([])
+// 'showLessonsPage' toggles between the main lesson view (true) and checkout view (false)
 const showLessonsPage = ref(true)
+
+// --- FILTER & SORT STATE ---
+// Stores the attribute to sort by (subject, location, price, spaces)
 const sortAttribute = ref('subject')
+// Stores the sort direction (ascending or descending)
 const sortOrder = ref('ascending')
+// Stores the user's search input
 const searchTerm = ref('')
+
+// --- CHECKOUT FORM STATE ---
 const orderName = ref('')
 const orderPhone = ref('')
 
-// Live Render Backend URL
+// --- CONFIGURATION ---
+// The base URL for our backend API on Render.
+// This is used for all fetch requests to retrieve lessons and submit orders.
 const BASE_URL = 'https://coursework-backend-qzv7.onrender.com'
 
+// --- LIFECYCLE HOOKS ---
+// onMounted runs automatically when the app starts.
+// We use it to fetch the initial list of all lessons from the backend.
 onMounted(() => {
   fetch(`${BASE_URL}/lessons`)
     .then((response) => response.json())
     .then((data) => {
-      lessons.value = data
+      lessons.value = data // Store the fetched data in our reactive variable
     })
     .catch((error) => console.error('Error fetching lessons:', error))
 })
 
+// --- WATCHERS ---
+// Watch the 'searchTerm' variable. Whenever the user types something, this runs.
+// This implements the "Search as you type" requirement.
 watch(searchTerm, (newTerm) => {
   if (newTerm.trim().length > 0) {
+    // If there is text, send a request to the backend search endpoint
     fetch(`${BASE_URL}/search?q=${newTerm}`)
       .then((response) => response.json())
       .then((data) => {
-        lessons.value = data
+        lessons.value = data // Update the list with the search results
       })
       .catch((error) => console.error('Error searching lessons:', error))
   } else {
+    // If the search box is cleared, fetch the full list of lessons again
     fetch(`${BASE_URL}/lessons`)
       .then((response) => response.json())
       .then((data) => {
@@ -41,93 +64,101 @@ watch(searchTerm, (newTerm) => {
   }
 })
 
+// --- METHODS ---
+
+// Adds a lesson ID to the cart and decreases the local availability counter
 function addToCart(lesson) {
   cart.value.push(lesson.id)
   lesson.spaces -= 1
 }
 
+// Toggles the view between the product list and the shopping cart
 function toggleCartPage() {
   showLessonsPage.value = !showLessonsPage.value
 }
 
+// Removes an item from the cart and adds the space back to the lesson
 function removeFromCart(lesson) {
+  // Find the index of the first occurrence of this lesson ID in the cart
   const index = cart.value.indexOf(lesson.id)
   if (index > -1) {
-    cart.value.splice(index, 1)
-    lesson.spaces += 1
+    cart.value.splice(index, 1) // Remove the ID from the cart array
+    lesson.spaces += 1 // Increase the available spaces visually
   }
 }
 
+// Handles the checkout process: saves the order and updates lesson spaces
 async function submitOrder() {
-  // 1. Prepare the detailed lesson data
-  // We map over the cart IDs and find the matching lesson object for each one
-  const orderDetails = cart.value.map((cartId) => {
-    const lesson = lessons.value.find((l) => l.id === cartId)
-    return {
-      id: lesson.id,
-      topic: lesson.subject, // Saving the name/topic
-      location: lesson.location,
-      price: lesson.price,
-    }
-  })
-
-  // 2. Create the order object with the extra details
+  // 1. Create the order object to send to the server
   const order = {
     name: orderName.value,
     phone: orderPhone.value,
-    lessonIds: cart.value, // We keep this to satisfy the specific coursework requirement
-    lessons: orderDetails, // We ADD this to make the database more useful
-    totalPrice: orderDetails.reduce((sum, item) => sum + item.price, 0), // Bonus: Calculate total price
+    lessonIds: cart.value,
   }
 
-  // Group the cart items for the PUT request (unchanged logic)
+  // Identify which lessons need their space count updated in the database
   const cartItemDetails = cart.value.map((id) => lessons.value.find((l) => l.id === id))
 
   try {
-    // 3. Save the order to Backend
+    // 2. Send the order data to the POST /orders endpoint
     await fetch(`${BASE_URL}/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(order),
     })
 
-    // 4. Update spaces (PUT request) - Unchanged
+    // 3. Update the remaining spaces for each purchased lesson
+    // We create an array of fetch promises (PUT requests) to run in parallel
     const updatePromises = cartItemDetails.map((item) => {
       return fetch(`${BASE_URL}/lessons/${item.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ spaces: item.spaces }),
+        body: JSON.stringify({ spaces: item.spaces }), // Send the new space count
       })
     })
+
+    // Wait for all space updates to complete
     await Promise.all(updatePromises)
 
-    // 5. Handle success
+    // 4. Reset the app state after a successful order
     alert('Order submitted successfully!')
     cart.value = []
     orderName.value = ''
     orderPhone.value = ''
-    toggleCartPage()
+    toggleCartPage() // Return to the main page
   } catch (error) {
     console.error('Failed to submit order:', error)
     alert('There was an error submitting your order. Please try again.')
   }
 }
 
+// --- COMPUTED PROPERTIES ---
+
+// Returns a sorted version of the 'lessons' array.
+// Note: Filtering is handled by the backend (via the watcher), so we only sort here.
 const sortedLessons = computed(() => {
-  const lessonsArray = [...lessons.value]
+  const lessonsArray = [...lessons.value] // Create a copy to avoid mutating state directly
+
   lessonsArray.sort((a, b) => {
     let comparison = 0
+    // Compare values based on the selected attribute
     if (a[sortAttribute.value] > b[sortAttribute.value]) comparison = 1
     else if (a[sortAttribute.value] < b[sortAttribute.value]) comparison = -1
+
+    // Reverse the comparison if sorting in descending order
     return sortOrder.value === 'descending' ? -comparison : comparison
   })
+
   return lessonsArray
 })
 
+// Maps the IDs in the cart array to the full lesson objects for display
 const cartItems = computed(() => {
   return cart.value.map((itemId) => lessons.value.find((lesson) => lesson.id === itemId))
 })
 
+// Validates the checkout form using Regular Expressions
+// Returns true only if Name is letters/spaces and Phone is numbers
 const isCheckoutFormValid = computed(() => {
   const nameRegex = /^[A-Za-z\s]+$/
   const phoneRegex = /^[0-9]+$/

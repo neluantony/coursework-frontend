@@ -1,14 +1,18 @@
 <script setup>
+// Define the properties this component expects from the parent
 defineProps({
   lesson: {
-    type: Object,
-    required: true,
+    type: Object, // Expect a lesson object containing subject, price, etc.
+    required: true, // The component won't work without this data
   },
 })
 
+// Define custom events this component can emit to the parent
 const emit = defineEmits(['addToCart'])
 
+// Local handler for the button click
 function handleAddToCart() {
+  // Emit the 'addToCart' event so the parent component can update the cart state
   emit('addToCart')
 }
 </script>
@@ -48,11 +52,11 @@ function handleAddToCart() {
 </template>
 
 <style scoped>
-/* Card Container */
+/* Card Container styling for structure and hover effects */
 .lesson-card {
   background: white;
   border-radius: 12px;
-  overflow: hidden; /* Keeps image inside rounded corners */
+  overflow: hidden; /* Keeps content inside rounded corners */
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
   transition:
     transform 0.3s,
@@ -63,13 +67,13 @@ function handleAddToCart() {
   border: 1px solid #eee;
 }
 
-/* Hover Effect for the whole card */
+/* Lift the card slightly when hovered */
 .lesson-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
-/* Header Styling */
+/* Header area with light background */
 .card-header {
   background-color: #f8f9fa;
   padding: 1.5rem;
@@ -84,7 +88,7 @@ function handleAddToCart() {
   margin-bottom: 0.5rem;
 }
 
-/* Floating Price Tag */
+/* Floating Green Price Tag */
 .price-tag {
   position: absolute;
   top: 15px;
@@ -98,10 +102,10 @@ function handleAddToCart() {
   box-shadow: 0 2px 5px rgba(46, 204, 113, 0.3);
 }
 
-/* Body Styling */
+/* Content Area */
 .card-body {
   padding: 1.2rem;
-  flex-grow: 1;
+  flex-grow: 1; /* Ensures the footer stays at the bottom */
 }
 
 h3 {
@@ -125,7 +129,7 @@ h3 {
   margin-right: 8px;
 }
 
-/* Low Stock Warning Color */
+/* Style for low availability (Red warning color) */
 .availability.low-stock {
   color: #e74c3c;
 }
@@ -134,13 +138,14 @@ h3 {
   color: #e74c3c;
 }
 
-/* Footer Styling */
+/* Footer area for the button */
 .card-footer {
   padding: 1.2rem;
   background-color: #fff;
   border-top: 1px solid #f5f5f5;
 }
 
+/* Action Button Styling */
 button {
   width: 100%;
   background-color: #3498db;
