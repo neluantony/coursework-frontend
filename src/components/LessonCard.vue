@@ -1,5 +1,5 @@
 <script setup>
-// Define the properties this component expects from the parent
+// Define the properties this component expects from the parent (App.vue)
 defineProps({
   lesson: {
     type: Object, // Expect a lesson object containing subject, price, etc.
@@ -12,7 +12,8 @@ const emit = defineEmits(['addToCart'])
 
 // Local handler for the button click
 function handleAddToCart() {
-  // Emit the 'addToCart' event so the parent component can update the cart state
+  // We just tell the parent "Add was clicked".
+  // The parent (App.vue) already knows WHICH lesson this is because of the v-for loop.
   emit('addToCart')
 }
 </script>

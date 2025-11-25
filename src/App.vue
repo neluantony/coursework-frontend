@@ -26,7 +26,6 @@ const orderPhone = ref('')
 
 // --- CONFIGURATION ---
 // The base URL for our backend API on Render.
-// This is used for all fetch requests to retrieve lessons and submit orders.
 const BASE_URL = 'https://coursework-backend-qzv7.onrender.com'
 
 // --- LIFECYCLE HOOKS ---
@@ -43,7 +42,7 @@ onMounted(() => {
 
 // --- WATCHERS ---
 // Watch the 'searchTerm' variable. Whenever the user types something, this runs.
-// This implements the "Search as you type" requirement.
+// This implements the "Search as you type" requirement (Approach 2).
 watch(searchTerm, (newTerm) => {
   if (newTerm.trim().length > 0) {
     // If there is text, send a request to the backend search endpoint
@@ -68,7 +67,8 @@ watch(searchTerm, (newTerm) => {
 
 // Adds a lesson ID to the cart and decreases the local availability counter
 function addToCart(lesson) {
-  cart.value.push(lesson.id)
+  // We use _id because that is how MongoDB stores the unique identifier
+  cart.value.push(lesson._id)
   lesson.spaces -= 1
 }
 
@@ -80,7 +80,7 @@ function toggleCartPage() {
 // Removes an item from the cart and adds the space back to the lesson
 function removeFromCart(lesson) {
   // Find the index of the first occurrence of this lesson ID in the cart
-  const index = cart.value.indexOf(lesson.id)
+  const index = cart.value.indexOf(lesson._id)
   if (index > -1) {
     cart.value.splice(index, 1) // Remove the ID from the cart array
     lesson.spaces += 1 // Increase the available spaces visually
@@ -89,28 +89,42 @@ function removeFromCart(lesson) {
 
 // Handles the checkout process: saves the order and updates lesson spaces
 async function submitOrder() {
-  // 1. Create the order object to send to the server
+  // 1. Prepare detailed lesson data (Snapshotting)
+  // We map over the cart IDs and find the matching lesson object for each one
+  // This ensures the order history contains the actual lesson name/price at time of purchase
+  const orderDetails = cart.value.map((cartId) => {
+    const lesson = lessons.value.find((l) => l._id === cartId)
+    return {
+      lessonId: lesson._id,
+      topic: lesson.subject,
+      price: lesson.price,
+    }
+  })
+
+  // 2. Create the order object to send to the server
   const order = {
     name: orderName.value,
     phone: orderPhone.value,
-    lessonIds: cart.value,
+    lessonIds: cart.value, // Keep simple IDs for reference
+    lessons: orderDetails, // Store full details for better database utility
+    totalPrice: orderDetails.reduce((sum, item) => sum + item.price, 0), // Calculate total
   }
 
   // Identify which lessons need their space count updated in the database
-  const cartItemDetails = cart.value.map((id) => lessons.value.find((l) => l.id === id))
+  const cartItemDetails = cart.value.map((id) => lessons.value.find((l) => l._id === id))
 
   try {
-    // 2. Send the order data to the POST /orders endpoint
+    // 3. Send the order data to the POST /orders endpoint
     await fetch(`${BASE_URL}/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(order),
     })
 
-    // 3. Update the remaining spaces for each purchased lesson
+    // 4. Update the remaining spaces for each purchased lesson
     // We create an array of fetch promises (PUT requests) to run in parallel
     const updatePromises = cartItemDetails.map((item) => {
-      return fetch(`${BASE_URL}/lessons/${item.id}`, {
+      return fetch(`${BASE_URL}/lessons/${item._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ spaces: item.spaces }), // Send the new space count
@@ -120,7 +134,7 @@ async function submitOrder() {
     // Wait for all space updates to complete
     await Promise.all(updatePromises)
 
-    // 4. Reset the app state after a successful order
+    // 5. Reset the app state after a successful order
     alert('Order submitted successfully!')
     cart.value = []
     orderName.value = ''
@@ -154,7 +168,8 @@ const sortedLessons = computed(() => {
 
 // Maps the IDs in the cart array to the full lesson objects for display
 const cartItems = computed(() => {
-  return cart.value.map((itemId) => lessons.value.find((lesson) => lesson.id === itemId))
+  // We use _id to match the lesson objects
+  return cart.value.map((itemId) => lessons.value.find((lesson) => lesson._id === itemId))
 })
 
 // Validates the checkout form using Regular Expressions
@@ -221,7 +236,7 @@ const isCheckoutFormValid = computed(() => {
         <div id="lessons-container">
           <LessonCard
             v-for="lesson in sortedLessons"
-            :key="lesson.id"
+            :key="lesson._id"
             :lesson="lesson"
             @add-to-cart="addToCart(lesson)"
           />
@@ -238,7 +253,7 @@ const isCheckoutFormValid = computed(() => {
               <button class="secondary-btn" @click="toggleCartPage">Go Back</button>
             </div>
             <div v-else class="cart-items-list">
-              <div v-for="item in cartItems" :key="item.id" class="cart-item">
+              <div v-for="item in cartItems" :key="item._id" class="cart-item">
                 <div class="item-info">
                   <i :class="item.icon" class="item-icon"></i>
                   <div>
